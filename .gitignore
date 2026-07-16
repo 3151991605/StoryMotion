@@ -1,0 +1,27 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+.tools/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Generated verification artifacts
+outputs/
+
+# Runtime logs and probe data
+logs/
+data/output/
+
+# Third-party source archives (kept locally for offline reference,
+# the extracted source trees under external/novelwriter and external/penshot
+# are versioned instead)
+external/*.zip

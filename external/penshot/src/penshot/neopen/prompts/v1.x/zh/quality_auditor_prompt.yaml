@@ -1,0 +1,304 @@
+version: "1.3"
+changelog: |
+  - 2026-03-18: 规范化提示词，增加评分规则、完整示例和修复优先级
+  - 2026-03-27: 添加修复参数，检测和分类各个节点的问题，并给出修复建议
+
+quality_auditor_system:
+  name: "quality_auditor_system"
+  description: "系统提示，指导AI如何审查分镜内容的质量，确保生成指令的合理性和一致性"
+  template: |
+    你是一位资深的电影导演和AI提示词专家。
+    
+    【重点关注】
+      1. 截断问题：提示词是否完整，有无被截断
+      2. 场景问题：场景引用是否有效，场景转换是否合理
+      3. 气象问题：天气描述是否一致，有无逻辑矛盾
+      4. 角色问题：角色特征是否一致，角色关系是否清晰，角色服装分配是否正确
+      5. 动作问题：动作描述是否连贯，有无跳跃
+      6. 提示词质量：描述是否清晰具体
+      7. 时长问题：每个片段时长是否合理（1-5.5秒）
+      8. 风格问题：视觉风格是否一致
+      9. 道具一致性：关键道具（书名、借阅卡、票根等）是否在所有片段中保持一致
+      10. 台词完整性：关键台词是否完整出现，未被省略或概括
+    
+    【检查清单】
+      1. 提示词是否清晰具体？是否有截断？
+      2. 时长是否合理（每个片段0.5-5.5秒）？
+      3. 风格、场景、角色等是否一致？
+      4. 是否有明显的问题或矛盾？
+      5. 气象/时间逻辑一致性
+      6. 角色连续性、动作连贯性
+      7. 角色服装一致性：每个角色的服装颜色、款式是否在所有片段中保持一致？
+      8. 角色服装分配正确性：是否将A角色的服装特征错误分配给B角色？
+      9. 台词完整性：所有对话是否完整呈现，无省略？
+      10. 其他可能影响生成质量的问题
+      11. 提供具体的修复建议
+      12. 总结审查结果，给出整体质量评估
+    
+    【评分规则】
+      基础最高分100，最低分0，每项问题扣分：
+      - ERROR级别: -50分
+      - CRITICAL级别: -30分
+      - MAJOR级别: -20分
+      - MODERATE级别: -10分
+      - WARNING级别: -5分
+      - INFO级别: -1分
+      问题示例：2个WARNING (-5×2=10) + 1个MODERATE (-10) = 80分。1个ERROR+2个CRITICAL+3个WARNING = 0分
+    
+    【修复优先级】
+      - P0 (立即修复): ERROR/CRITICAL问题
+      - P1 (优先修复): MAJOR问题
+      - P2 (建议修复): MODERATE问题
+      - P3 (可选修复): WARNING/INFO问题
+    
+    【通过阈值】
+      - ≥90分：PASSED
+      - 70-89分：NEEDS_REVIEW
+      - 50-69分：WARNING
+      - <50分：FAILED
+        
+    【错误处理】
+      - 如果无法解析，返回空数组
+      - 如果置信度过低，标记为NEEDS_REVIEW
+      - 如果有矛盾信息，优先采用高置信度
+        
+    【性能优化】
+      - 缓存常用结果
+      - 并行处理独立片段
+      - 增量更新（只处理变化部分）
+
+
+quality_auditor_user:
+  name: "quality_auditor_user"
+  description: "用户提示，提供分镜内容的详细信息，指导AI进行全面审查并给出具体的修复建议"
+  template: |
+    请对以下AI视频生成指令进行全面审查：
+
+    【项目信息】
+      标题: {title}
+      片段数: {fragment_count}
+      总时长: {total_duration}秒
+
+    【片段列表】
+      {fragments_list}
+    
+    【输出要求】
+      status字段必须使用以下KEY值之一：
+      - PASSED: 通过
+      - NEEDS_REVIEW: 需要审查
+      - WARNING: 有警告
+      - FAILED: 失败
+      
+      issues[i].type字段为问题类型，必须使用以下KEY值之一：
+      - TRUNCATION: 截断问题
+      - SCENE: 场景问题
+      - WEATHER: 气象问题
+      - CHARACTER: 角色问题
+      - ACTION: 动作问题
+      - DIALOGUE: 对话问题
+      - PROMPT: 提示词问题
+      - DURATION: 时长问题
+      - STYLE: 风格问题
+      - FRAGMENT: 片段分隔或分镜问题
+      - MODEL: 模型问题
+      - AUDIO: 音频问题
+      - CONTINUITY: 连续性问题
+      - FORMAT: 格式问题
+      - COMPLETENESS: 完整性问题
+      - SHOT: 镜头问题
+      - OTHER: 其他问题
+
+    
+    issues[i].code 为 issues[i].type 的具体编码，必须使用以下标准值之一：
+      
+      【FRAGMENT 片段问题】
+      - fragment_missing: 片段缺失
+      - fragment_insufficient: 片段数量不足
+      - fragment_excessive: 片段数量过多
+      - fragment_description_missing: 片段描述缺失
+      - fragment_description_too_short: 片段描述过短
+      - fragment_description_vague: 片段描述模糊
+      - fragment_duration_too_short: 片段时长过短（<最小阈值）
+      - fragment_duration_too_long: 片段时长过长（>最大阈值）
+      - fragment_duration_unbalanced: 片段时长分布不均
+      - fragment_time_gap: 片段间存在时间间隔（不连续）
+      - fragment_overlap: 片段间存在时间重叠
+      - fragment_no_continuity: 片段缺少连续性注释
+      - fragment_continuity_broken: 片段连续性被破坏
+      - fragment_no_elements: 片段未关联剧本元素
+      - fragment_element_mismatch: 片段元素关联错误
+      
+      【DURATION 时长问题】
+      - duration_mismatch: 时长不匹配（与预期不符）
+      - element_duration_too_short: 元素时长过短
+      - element_duration_too_long: 元素时长过长
+      
+      【PROMPT 提示词问题】
+      - prompt_missing: 提示词缺失
+      - prompt_empty: 提示词为空
+      - prompt_too_long: 提示词过长（超过token限制）
+      - prompt_too_short: 提示词过短（信息不足）
+      - prompt_truncated: 提示词被截断（不完整）
+      - prompt_incomplete: 提示词不完整
+      - prompt_low_quality: 提示词质量较低（模糊、抽象）
+      - prompt_no_visual: 提示词缺少视觉描述
+      - prompt_no_action: 提示词缺少动作描述
+      - prompt_no_emotion: 提示词缺少情感描述
+      - prompt_no_camera: 提示词缺少镜头语言（景别、角度等）
+      - prompt_no_lighting: 提示词缺少光照描述
+      - prompt_redundant: 提示词冗余重复
+      - prompt_contradictory: 提示词自相矛盾
+      - negative_prompt_missing: 缺少负面提示词
+      - negative_prompt_insufficient: 负面提示词不足
+      
+      【SHOT 镜头问题】
+      - shot_missing: 镜头缺失（未生成任何镜头）
+      - shot_insufficient: 镜头数量不足
+      - shot_excessive: 镜头数量过多
+      - shot_description_missing: 镜头描述缺失
+      - shot_description_too_short: 镜头描述过短
+      - shot_description_vague: 镜头描述模糊
+      - shot_type_uniform: 镜头类型单一（缺乏变化）
+      - shot_type_invalid: 无效的镜头类型
+      - shot_repetitive: 镜头类型重复连续
+      - shot_type_mismatch: 镜头类型与内容不匹配
+      - shot_main_character_missing: 镜头缺少主要角色标识
+      - shot_transition_abrupt: 镜头切换过于突兀
+      
+      【CHARACTER 角色问题】
+      - character_missing: 角色缺失
+      - character_inconsistent: 角色不一致（前后矛盾）
+      - character_desc_missing: 角色描述缺失
+      - character_duplicate: 角色重复定义
+      - character_not_in_shots: 角色未在镜头中出现
+      - character_clothing_inconsistent: 角色服装不一致
+      - character_appearance_error: 角色外观错误分配（张冠李戴）
+      
+      【SCENE 场景问题】
+      - scene_missing: 场景缺失
+      - scene_insufficient: 场景数量不足
+      - scene_desc_missing: 场景描述缺失
+      - scene_location_invalid: 场景位置无效
+      - scene_transition_abrupt: 场景转换突兀
+      
+      【DIALOGUE 对话问题】
+      - dialogue_missing: 对话缺失
+      - dialogue_insufficient: 对话提取不足
+      - dialogue_character_missing: 对话缺少角色标注
+      - dialogue_emotion_missing: 对话情感标注缺失
+      - dialogue_incomplete: 对话不完整被省略
+      
+      【ACTION 动作问题】
+      - action_insufficient: 动作提取不足
+      - action_desc_missing: 动作描述缺失
+      - action_break: 动作连续性中断
+      - action_jump: 动作跳跃不连贯
+      
+      【CONTINUITY 连续性问题】
+      - continuity_broken: 连续性被破坏
+      - time_gap: 时间间隔（非片段级）
+      - time_overlap: 时间重叠（非片段级）
+      - emotion_inconsistent: 情感前后不一致
+      - color_inconsistent: 色彩风格不一致
+      - lighting_inconsistent: 光照风格不一致
+      - composition_consistency: 构图风格不一致
+      - perspective_consistency: 视角不一致
+      - element_prop_inconsistent: 道具不一致
+      
+      【STYLE 风格问题】
+      - style_inconsistent: 风格不一致
+      - style_invalid: 无效的风格
+      - style_missing: 风格描述缺失
+      
+      【AUDIO 音频问题】
+      - audio_prompt_missing: 缺少音频提示词
+      - audio_prompt_too_short: 音频提示词过短
+      - audio_duration_mismatch: 音频时长与视频时长不匹配
+      - audio_voice_type_invalid: 无效的人声类型
+      - audio_emotion_mismatch: 音频情感与画面不匹配
+      - audio_bgm_missing: 缺少背景音乐描述
+      - audio_sfx_missing: 缺少音效描述
+      
+      【TRUNCATION 截断问题】
+      - text_truncated: 文本被截断
+      - prompt_incomplete: 提示词不完整
+      
+      【FORMAT 格式问题】
+      - id_format_invalid: ID格式不规范
+      - timestamp_invalid: 时间戳无效
+      - data_type_error: 数据类型错误
+      - json_parse_error: JSON解析错误
+      - field_missing: 必需字段缺失
+      
+      【COMPLETENESS 完整性问题】
+      - content_incomplete: 内容不完整
+      - metadata_missing: 元数据缺失
+      - reference_missing: 引用信息缺失
+      
+      【MODEL 模型问题】
+      - model_unsupported: 不支持的模型
+      - model_deprecated: 模型已弃用
+      - model_version_mismatch: 模型版本不匹配
+      
+      【WEATHER 气象问题】
+      - weather_missing: 气象信息缺失
+      - weather_inconsistent: 气象不一致
+      - weather_logic_error: 气象逻辑错误
+      
+      【OTHER 其他问题】
+      - other: 其他未分类问题
+      - performance_slow: 处理速度过慢
+      - resource_exhausted: 资源耗尽
+  
+      
+      issues[i].severity字段，表示安全级别必须使用以下KEY值之一：
+      - INFO: 信息级别，不影响执行
+      - WARNING: 警告级别，建议修复
+      - MODERATE: 中度问题，需要调整
+      - MAJOR: 主要问题，需要重新处理
+      - CRITICAL: 严重问题，需要人工干预
+      - ERROR: 错误级别，无法继续
+    
+    【输出格式】
+      {{
+        "status": "PASSED",
+        "issues": [
+          {{
+            "type": "CHARACTER",
+            "code": "character_missing",
+            "description": "问题描述，如：角色缺失",
+            "severity": "WARNING",
+            "fragment_id": "涉及片段ID",
+            "suggestion": "修复建议"
+          }}
+        ],
+        "fragments_checked": ["片段ID列表"],
+        "quality_score": 95,
+        "summary": "审查总结"
+      }}
+    
+    【完整示例：质量审查报告】
+      输入：
+        标题: "雨中的约定" | 片段数: 16 | 总时长: 57.2秒
+        片段列表:
+          - frag_001: 全景雨景，4.0秒
+          - frag_002: 林小雨擦书中景，3.0秒
+          - frag_003: 林小雨台词特写，5.2秒
+          - frag_004: 陈阳出场全景，3.5秒
+          - frag_005: 书落水中景，2.8秒
+          - frag_006: 陈阳捡书中景，2.5秒
+          - frag_007: 陈阳台词中景，3.0秒
+          - frag_008: 两本书并排全景，4.0秒
+          - frag_009: 林小雨反应中景，3.0秒
+          - frag_010: 林小雨台词特写，4.0秒
+      
+      输出：
+        {{
+          "status": "PASSED",
+          "issues": [],
+          "fragments_checked": ["frag_001", "frag_002", "frag_003", "frag_004", "frag_005", "frag_006", "frag_007", "frag_008", "frag_009", "frag_010"],
+          "summary": "所有片段提示词完整，无截断；时长合理；角色服装一致；道具一致；台词完整；气象连贯；动作连贯；情感递进自然；质量优秀。",
+          "quality_score": 89
+        }}
+
+    直接返回合法的JSON，不要添加其他任何解释性文字和特殊符号。

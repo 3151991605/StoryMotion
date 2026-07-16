@@ -1,0 +1,58 @@
+{
+  "fragments": [
+    {
+      "fragment_id": "frag_001",
+      "prompt": "Cinematic close-up, Lin Chen's wrist mark emits golden light as blue candles and purple energy flow backward, anime fantasy, consistent character design",
+      "negative_prompt": "text, watermark, extra limbs, inconsistent face, blurry",
+      "duration": 10.0,
+      "model": "runway_gen2",
+      "style": "oriental fantasy anime",
+      "audio_prompt": {"prompt": "Reversed flame whoosh, low mystical bell and tense ambience"}
+    },
+    {
+      "fragment_id": "frag_002",
+      "prompt": "Medium tracking shot, Lin Chen grips an ancient short sword and scans the dark seventh floor while coffin runes flicker, anime fantasy",
+      "negative_prompt": "text, watermark, extra limbs, inconsistent costume",
+      "duration": 10.0,
+      "model": "runway_gen2",
+      "style": "oriental fantasy anime",
+      "audio_prompt": {"prompt": "Low stone chamber ambience and faint rune crackle"}
+    },
+    {
+      "fragment_id": "frag_003",
+      "prompt": "Wide shot, purple light erupts from the cracked hanging coffin and Gu Qing's silver-haired spirit rises, Lin Chen faces her with sword drawn",
+      "negative_prompt": "text, watermark, duplicated characters, inconsistent face",
+      "duration": 10.0,
+      "model": "runway_gen2",
+      "style": "oriental fantasy anime",
+      "audio_prompt": {"prompt": "Surging energy, cloth flutter and spectral resonance"}
+    },
+    {
+      "fragment_id": "frag_004",
+      "prompt": "Alternating close-ups, Gu Qing's golden neck mark resonates with Lin Chen's brow mark as coffin cracks spread during their confrontation",
+      "negative_prompt": "text, watermark, extra faces, costume change",
+      "duration": 10.0,
+      "model": "runway_gen2",
+      "style": "oriental fantasy anime",
+      "audio_prompt": {"prompt": "Quiet tense dialogue, pulsing magical hum and cracking stone"}
+    },
+    {
+      "fragment_id": "frag_005",
+      "prompt": "Close-up, Gu Qing touches the coffin, purple energy surges and Lin Chen's wrist scar burns while his sword hand tightens",
+      "negative_prompt": "text, watermark, malformed hands, inconsistent clothing",
+      "duration": 10.0,
+      "model": "runway_gen2",
+      "style": "oriental fantasy anime",
+      "audio_prompt": {"prompt": "Energy blast, sharp pulse and strained breath"}
+    },
+    {
+      "fragment_id": "frag_006",
+      "prompt": "Slow push-in, clock markings spin backward beneath the coffin and an ancient silhouette emerges from deep purple light as the tower shakes",
+      "negative_prompt": "text, watermark, visible modern objects, low detail",
+      "duration": 10.0,
+      "model": "runway_gen2",
+      "style": "oriental fantasy anime",
+      "audio_prompt": {"prompt": "Ancient bell toll, deep rumble and rising supernatural drone"}
+    }
+  ]
+}

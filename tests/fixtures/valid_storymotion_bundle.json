@@ -1,0 +1,181 @@
+{
+  "brief": {
+    "genre": "东方玄幻",
+    "style": ["热血", "悬疑"],
+    "protagonist_name": "林辰",
+    "core_idea": "主角每天可以让时间倒退十秒",
+    "target_duration": 60,
+    "max_characters": 3,
+    "max_locations": 5,
+    "ending_type": "cliffhanger"
+  },
+  "story": {
+    "title": "倒退十秒",
+    "logline": "林辰在死亡瞬间觉醒回溯能力，并得知兄长可能尚在人世。",
+    "target_duration": 60,
+    "worldview": {
+      "world_name": "九域",
+      "era": "宗门统治时代",
+      "power_system": "灵脉修炼",
+      "special_rule": "时间能力会引发反噬",
+      "locations": [
+        {
+          "id": "loc_001",
+          "name": "废弃试炼塔",
+          "visual_description": "破碎石柱与蓝色月光"
+        }
+      ]
+    },
+    "characters": [
+      {
+        "id": "char_001",
+        "name": "林辰",
+        "role": "protagonist",
+        "age": 18,
+        "personality": ["冷静", "执着"],
+        "goal": "查明兄长失踪真相",
+        "ability": "每天让时间倒退十秒",
+        "appearance": {
+          "hair": "黑色短发",
+          "clothing": "深灰色宗门服",
+          "distinctive_features": ["左眼下方浅色伤痕"]
+        },
+        "visual_prompt_zh": "黑色短发少年，深灰宗门服，左眼下浅色伤痕",
+        "visual_prompt_en": "black-haired young man in a dark gray sect robe"
+      },
+      {
+        "id": "char_002",
+        "name": "玄兽",
+        "role": "antagonist",
+        "age": null,
+        "personality": ["危险", "神秘"],
+        "goal": "逼迫林辰使用时间能力",
+        "ability": null,
+        "appearance": {
+          "hair": "无",
+          "clothing": "黑色鳞甲",
+          "distinctive_features": ["金色竖瞳"]
+        },
+        "visual_prompt_zh": "黑色鳞甲玄兽，金色竖瞳",
+        "visual_prompt_en": "black-scaled beast with golden slit pupils"
+      }
+    ],
+    "beats": [
+      {"beat_type": "hook", "duration": 10, "content": "死亡瞬间时间倒退"},
+      {"beat_type": "setup", "duration": 10, "content": "林辰意识到能力觉醒"},
+      {"beat_type": "conflict", "duration": 20, "content": "连续回溯躲避玄兽"},
+      {"beat_type": "reversal", "duration": 10, "content": "玄兽突然停止攻击"},
+      {"beat_type": "cliffhanger", "duration": 10, "content": "兄长可能没有死"}
+    ],
+    "story_text": "林辰在废弃试炼塔中遭到玄兽袭击。死亡瞬间，时间突然倒退十秒。他连续回溯躲开利爪，却发现手背出现黑色裂纹。玄兽最终停下攻击，告诉他失踪的兄长并没有死。"
+  },
+  "screenplay": {
+    "title": "倒退十秒",
+    "target_duration": 60,
+    "characters": [
+      {
+        "id": "char_001",
+        "name": "林辰",
+        "role": "protagonist",
+        "age": 18,
+        "personality": ["冷静", "执着"],
+        "goal": "查明兄长失踪真相",
+        "ability": "每天让时间倒退十秒",
+        "appearance": {
+          "hair": "黑色短发",
+          "clothing": "深灰色宗门服",
+          "distinctive_features": ["左眼下方浅色伤痕"]
+        },
+        "visual_prompt_zh": "黑色短发少年，深灰宗门服，左眼下浅色伤痕",
+        "visual_prompt_en": "black-haired young man in a dark gray sect robe"
+      },
+      {
+        "id": "char_002",
+        "name": "玄兽",
+        "role": "antagonist",
+        "age": null,
+        "personality": ["危险", "神秘"],
+        "goal": "逼迫林辰使用时间能力",
+        "ability": null,
+        "appearance": {
+          "hair": "无",
+          "clothing": "黑色鳞甲",
+          "distinctive_features": ["金色竖瞳"]
+        },
+        "visual_prompt_zh": "黑色鳞甲玄兽，金色竖瞳",
+        "visual_prompt_en": "black-scaled beast with golden slit pupils"
+      }
+    ],
+    "locations": [
+      {
+        "id": "loc_001",
+        "name": "废弃试炼塔",
+        "visual_description": "破碎石柱与蓝色月光"
+      }
+    ],
+    "scenes": [
+      {
+        "scene_id": "scene_001",
+        "location_id": "loc_001",
+        "duration": 30,
+        "characters": ["char_001", "char_002"],
+        "scene_goal": "展示时间回溯能力",
+        "action": "玄兽利爪落下，画面突然倒放十秒。",
+        "dialogues": [],
+        "voiceover": "死亡到来的瞬间，时间倒退了。",
+        "emotion": "震惊",
+        "transition": "flash"
+      },
+      {
+        "scene_id": "scene_002",
+        "location_id": "loc_001",
+        "duration": 30,
+        "characters": ["char_001", "char_002"],
+        "scene_goal": "制造悬念",
+        "action": "玄兽停下攻击，金色竖瞳盯住林辰。",
+        "dialogues": [
+          {
+            "speaker_id": "char_002",
+            "text": "你的兄长并没有死。",
+            "emotion": "低沉"
+          }
+        ],
+        "voiceover": null,
+        "emotion": "悬疑",
+        "transition": null
+      }
+    ]
+  },
+  "storyboard": {
+    "title": "倒退十秒",
+    "target_duration": 60,
+    "shots": [
+      {
+        "shot_id": "shot_001",
+        "scene_id": "scene_001",
+        "duration": 30,
+        "shot_type": "medium",
+        "camera_movement": "tracking",
+        "visual_description": "玄兽利爪逼近林辰，画面高速倒放。",
+        "character_ids": ["char_001", "char_002"],
+        "image_prompt": "废弃石塔中的黑发少年与黑色玄兽",
+        "video_prompt": "利爪落下后环境倒放，角色外观保持一致",
+        "negative_prompt": "文字，水印，多余肢体",
+        "audio_prompt": "风声与倒放音效"
+      },
+      {
+        "shot_id": "shot_002",
+        "scene_id": "scene_002",
+        "duration": 30,
+        "shot_type": "close_up",
+        "camera_movement": "slow_push",
+        "visual_description": "玄兽金色竖瞳特写，林辰震惊回头。",
+        "character_ids": ["char_001", "char_002"],
+        "image_prompt": "金色竖瞳玄兽与震惊少年",
+        "video_prompt": "镜头缓慢推进，玄兽低声说出秘密",
+        "negative_prompt": null,
+        "audio_prompt": "低沉对白与环境风声"
+      }
+    ]
+  }
+}
