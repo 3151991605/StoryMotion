@@ -50,5 +50,5 @@ def test_ffmpeg_command_is_vertical_h264_and_overwrite_safe(tmp_path: Path) -> N
     assert "s=720x1280" in joined
     assert "libx264" in command
     assert "aac" in command
-    assert "ass=timeline.ass" in joined
+    assert "subtitles=timeline.ass:charenc=UTF-8" in joined
     assert command[-1].endswith("mock.mp4")

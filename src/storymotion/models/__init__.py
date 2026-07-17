@@ -10,7 +10,7 @@ from .media import (
 )
 from .project import ProjectBrief
 from .screenplay import Dialogue, Scene, ScreenplayPackage
-from .shot import Shot, ShotPackage
+from .shot import KeyframeContract, Shot, ShotPackage
 from .story import (
     Appearance,
     Character,
@@ -27,6 +27,7 @@ __all__ = [
     "Dialogue",
     "GeneratedImage",
     "ImageGenerationRequest",
+    "KeyframeContract",
     "Location",
     "MediaTaskStatus",
     "PlotBeat",

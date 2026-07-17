@@ -154,6 +154,7 @@ class MiniMaxShotProvider:
                     visual_description=creative.visual_description,
                     image_prompt=creative.image_prompt,
                     video_prompt=creative.video_prompt,
+                    keyframe_contract=structural_shot.keyframe_contract,
                     negative_prompt=(
                         creative.negative_prompt
                         or structural_shot.negative_prompt
@@ -184,7 +185,13 @@ class MiniMaxShotProvider:
                 for character in screenplay.characters
             ],
             "locations": [location.model_dump() for location in screenplay.locations],
-            "scenes": [scene.model_dump() for scene in screenplay.scenes],
+            # Dialogue and voiceover belong to the future TTS pipeline.  Do not
+            # give them to the visual-prompt model, which can otherwise turn
+            # spoken text into on-screen subtitles or lip-sync-like motion.
+            "scenes": [
+                scene.model_dump(exclude={"dialogues", "voiceover"})
+                for scene in screenplay.scenes
+            ],
         }
         immutable_shots = [
             {
@@ -223,7 +230,9 @@ class MiniMaxShotProvider:
                         "object only. Enrich every immutable shot exactly once. "
                         "Never add, remove, rename, or duplicate shot IDs. Do not "
                         "return scene_id, duration, or character_ids. Preserve "
-                        "visual continuity and write production-ready prompts."
+                        "visual continuity and write production-ready visual prompts. "
+                        "Do not add dialogue, voiceover, subtitles, spoken text, "
+                        "or lip-sync instructions."
                     ),
                 },
                 {

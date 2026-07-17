@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from storymotion.models import ScreenplayPackage, Shot, ShotPackage
+from storymotion.models import KeyframeContract, ScreenplayPackage, Shot, ShotPackage
 
 
 class RawAudioPrompt(BaseModel):
@@ -114,6 +114,7 @@ def adapt_penshot_result(
         )
 
     shots: list[Shot] = []
+    locations = {location.id: location for location in screenplay.locations}
     scene_index = 0
     elapsed_in_scene = 0.0
     tolerance = 0.01
@@ -142,6 +143,15 @@ def adapt_penshot_result(
                 character_ids=scene.characters,
                 image_prompt=fragment.prompt,
                 video_prompt=fragment.prompt,
+                keyframe_contract=KeyframeContract(
+                    required_visuals=[locations[scene.location_id].name],
+                    opening_state=fragment.prompt,
+                    key_action=scene.action,
+                    visible_result=f"{scene.action} 的结果在画面中清晰可见。",
+                    continuity_anchor=(
+                        f"保持{locations[scene.location_id].name}内的人物、服装、场景和光线一致。"
+                    ),
+                ),
                 negative_prompt=fragment.negative_prompt,
                 audio_prompt=audio_prompt,
             )

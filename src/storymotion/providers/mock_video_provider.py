@@ -14,6 +14,20 @@ MOCK_COLORS = (
     "0x581c87",
     "0x3b0764",
 )
+ASS_ENCODING = "utf-8-sig"
+SHOT_TYPE_LABELS = {
+    "wide": "全景",
+    "medium": "中景",
+    "close_up": "特写",
+    "over_shoulder": "过肩镜头",
+}
+CAMERA_MOVEMENT_LABELS = {
+    "slow_push": "缓慢推进",
+    "tracking": "跟拍",
+    "static": "固定镜头",
+    "slow_orbit": "缓慢环绕",
+    "handheld_subtle": "轻微手持",
+}
 
 
 def _ass_time(seconds: float) -> str:
@@ -72,10 +86,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             start = elapsed
             end = elapsed + shot.duration
             visual = _wrap_ass(_escape_ass(shot.visual_description[:100]))
+            shot_type = SHOT_TYPE_LABELS.get(shot.shot_type, shot.shot_type)
+            camera = CAMERA_MOVEMENT_LABELS.get(
+                shot.camera_movement, shot.camera_movement
+            )
             text = (
                 f"{{\\an8\\fs40}}{_escape_ass(package.title)}\\N"
-                f"{{\\an8\\fs30}}SHOT {index}/{shot_count} · {shot.scene_id} · "
-                f"{shot.duration:g}s\\N{shot.shot_type} · {shot.camera_movement}"
+                f"{{\\an8\\fs30}}镜头 {index}/{shot_count} · {shot.scene_id} · "
+                f"{shot.duration:g}秒\\N{shot_type} · {camera}"
                 f"\\N\\N{{\\an2\\fs32}}{visual}"
             )
             events.append(
@@ -126,7 +144,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         filter_parts.append(
             f"{''.join(video_labels)}concat=n={len(package.shots)}:v=1:a=0[base]"
         )
-        filter_parts.append(f"[base]ass={ass_file.name}[video]")
+        # Explicitly declare the subtitle charset.  Without this, libass may
+        # fall back to a system code page and render Chinese text as mojibake.
+        filter_parts.append(
+            f"[base]subtitles={ass_file.name}:charenc=UTF-8[video]"
+        )
         command.extend(
             [
                 "-filter_complex",
@@ -164,7 +186,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         output_file = output_file.resolve()
         output_file.parent.mkdir(parents=True, exist_ok=True)
         ass_file = output_file.parent / "timeline.ass"
-        ass_file.write_text(self.build_ass_timeline(package), encoding="utf-8")
+        # A BOM also helps ASS readers that do not honor FFmpeg's charenc option.
+        ass_file.write_text(self.build_ass_timeline(package), encoding=ASS_ENCODING)
         command = self.build_ffmpeg_command(
             package, ass_file=ass_file, output_file=output_file
         )

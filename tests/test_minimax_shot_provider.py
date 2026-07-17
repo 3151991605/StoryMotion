@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from storymotion.models import ScreenplayPackage, ShotPackage
+from storymotion.models import ScreenplayPackage, ShotPackage, StoryMotionBundle
 from storymotion.providers import FallbackShotProvider, RuleShotProvider
 from storymotion.providers.minimax_shot_provider import (
     MiniMaxProtocolError,
@@ -39,6 +39,24 @@ def enrichment(shot_id: str, index: int) -> dict[str, Any]:
         "negative_prompt": "watermark, subtitles",
         "audio_prompt": f"audio prompt {index}",
     }
+
+
+def test_visual_enrichment_request_excludes_spoken_text() -> None:
+    fixture = ROOT / "tests/fixtures/valid_storymotion_bundle.json"
+    bundle = StoryMotionBundle.model_validate_json(fixture.read_text(encoding="utf-8"))
+    provider = MiniMaxShotProvider(RecordingTransport(response_for(["shot_001"])))
+    skeleton = RuleShotProvider().generate(bundle.screenplay)
+
+    payload = provider._build_payload(bundle.screenplay, skeleton)
+    scenes = payload["messages"][1]["content"]
+    request = json.loads(scenes)
+
+    assert all(
+        "dialogues" not in scene and "voiceover" not in scene
+        for scene in request["screenplay"]["scenes"]
+    )
+    system = payload["messages"][0]["content"]
+    assert "Do not add dialogue" in system
 
 
 def response_for(
