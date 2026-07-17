@@ -28,6 +28,7 @@ from .penshot_sidecar import (
     UrllibJsonTransport,
 )
 from .rule_shot_provider import RuleShotProvider
+from .openai_compatible import OpenAICompatibleChatClient, TextGenerationError
 
 __all__ = [
     "FallbackShotProvider",
@@ -46,6 +47,7 @@ __all__ = [
     "PenShotSidecarClient",
     "PenShotSidecarProvider",
     "RuleShotProvider",
+    "OpenAICompatibleChatClient",
     "SidecarError",
     "SidecarProtocolError",
     "SidecarTaskError",
@@ -54,4 +56,5 @@ __all__ = [
     "UrllibJsonTransport",
     "UrllibMiniMaxChatTransport",
     "UrllibMiniMaxMediaTransport",
+    "TextGenerationError",
 ]

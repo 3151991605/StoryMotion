@@ -71,6 +71,12 @@ def test_generation_is_deterministic(screenplay: ScreenplayPackage) -> None:
     assert provider.generate(screenplay) == provider.generate(screenplay)
 
 
+def test_prompt_requires_non_repeating_action_and_continuity(screenplay: ScreenplayPackage) -> None:
+    package = RuleShotProvider(max_shot_duration=6).generate(screenplay)
+    assert all("No looping motion" in shot.video_prompt for shot in package.shots)
+    assert all("supplied first frame" in shot.video_prompt for shot in package.shots)
+
+
 def test_rejects_non_positive_shot_duration() -> None:
     with pytest.raises(ValueError, match="max_shot_duration"):
         RuleShotProvider(max_shot_duration=0)

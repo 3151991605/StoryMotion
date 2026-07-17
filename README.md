@@ -51,8 +51,12 @@ StoryMotion/
 ## 快速开始
 
 ```bash
-# 安装依赖
-pip install -e .
+# 安装应用与开发依赖
+pip install -e ".[ui,dev]"
+
+# 配置文本模型（任意兼容 OpenAI Chat Completions 的服务）
+copy .env.example .env
+# 编辑 .env：至少填入 LLM_API_KEY 和 LLM_MODEL
 
 # 启动 Streamlit Demo
 streamlit run streamlit_app.py
@@ -62,6 +66,20 @@ pytest -q
 ```
 
 环境变量：复制 `.env.example` 为 `.env` 并填入对应 Provider 的 API Key（见 `docs/plans/` 中各 Provider 方案）。
+
+### 交互式创作
+
+启动页面后，填写“一句需求”、题材、主角和时长，StoryMotion 会调用配置的文本模型生成小说和漫剧剧本；每一层会经过 Pydantic 协议校验，再由内置规则分镜器生成逐镜图像/视频 Prompt。完整制作包可直接下载为 JSON。
+
+文本生成环境变量：
+
+```dotenv
+LLM_API_KEY=你的文本模型密钥
+LLM_API_BASE=https://api.openai.com/v1
+LLM_MODEL=gpt-4o-mini
+```
+
+如果仅填写 `MINIMAX_API_KEY`，页面会自动使用 `https://api.minimaxi.com/v1` 与 `MiniMax-M2.7` 作为文本模型，无需重复填写 `LLM_*`。已有的 MiniMax / Hailuo 变量继续用于图片和真实视频任务。真实视频仍需要视频账户的单独额度；没有额度时可以先完成文本、剧本和分镜生成并下载交付包。
 
 ## 架构概览
 
