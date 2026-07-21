@@ -79,11 +79,18 @@ def _keyframe_contract(
         f"人物外观固定为{'；'.join(character_visuals) or '无可见人物'}。"
     )
     return KeyframeContract(
-        required_visuals=required_visuals,
-        opening_state=opening_state,
-        key_action=focus,
-        visible_result=visible_result,
-        continuity_anchor=continuity_anchor,
+        character_appearances=required_visuals,
+        start_keyframe=opening_state,
+        action=focus,
+        result=visible_result,
+        transition_from_previous=(
+            f"{continuity_anchor}本镜为场景开端。"
+            if part_index == 0
+            else f"{continuity_anchor}承接上一镜已经发生的动作进度。"
+        ),
+        transition_to_next=(
+            f"{continuity_anchor}下一镜从以下可见状态继续：{visible_result}"
+        ),
     )
 
 
@@ -140,24 +147,26 @@ class RuleShotProvider:
                 )
                 image_prompt = (
                     "竖屏 9:16，中国动画短剧关键帧。"
-                    f"必须出现：{'；'.join(contract.required_visuals)}。"
-                    f"开场状态：{contract.opening_state}"
-                    f"关键动作：{contract.key_action}。"
-                    f"可见结果：{contract.visible_result}。"
-                    f"连续性：{contract.continuity_anchor}"
+                    f"人物与画面要素：{'；'.join(contract.character_appearances)}。"
+                    f"起始关键帧：{contract.start_keyframe}"
+                    f"关键动作：{contract.action}。"
+                    f"结束关键帧：{contract.result}。"
+                    f"承接上一镜：{contract.transition_from_previous}"
+                    f"交给下一镜：{contract.transition_to_next}"
                     f"镜头：{SHOT_TYPE_LABELS[shot_type]}，"
                     f"{CAMERA_MOVEMENT_LABELS[camera_movement]}。特效：{effect}。"
                     "画面清晰，无屏幕文字、字幕或水印。"
                 )
                 video_prompt = (
                     "竖屏 9:16，高品质中国动画短剧。"
-                    f"必须出现：{'；'.join(contract.required_visuals)}。"
-                    f"开场状态：{contract.opening_state}"
-                    f"唯一连续动作：{contract.key_action}。"
-                    f"可见结果：{contract.visible_result}。"
+                    f"人物与画面要素：{'；'.join(contract.character_appearances)}。"
+                    f"起始关键帧：{contract.start_keyframe}"
+                    f"唯一连续动作：{contract.action}。"
+                    f"结束关键帧：{contract.result}。"
                     f"镜头：{SHOT_TYPE_LABELS[shot_type]}，"
                     f"{CAMERA_MOVEMENT_LABELS[camera_movement]}。特效：{effect}。"
-                    f"连续性：{contract.continuity_anchor}"
+                    f"承接上一镜：{contract.transition_from_previous}"
+                    f"交给下一镜：{contract.transition_to_next}"
                     "一个连续镜头，不循环、不重复动作、不随机切镜；"
                     "不出现文字、字幕、水印、口播或口型表演。"
                 )

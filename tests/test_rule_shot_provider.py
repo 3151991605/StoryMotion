@@ -54,10 +54,12 @@ def test_preserves_scene_characters_and_prompt_context(
         assert "竖屏 9:16" in shot.image_prompt
         assert shot.negative_prompt
         assert shot.audio_prompt
-        assert shot.keyframe_contract.required_visuals
-        assert shot.keyframe_contract.opening_state
-        assert shot.keyframe_contract.key_action
-        assert shot.keyframe_contract.visible_result
+        assert shot.keyframe_contract.character_appearances
+        assert shot.keyframe_contract.start_keyframe
+        assert shot.keyframe_contract.action
+        assert shot.keyframe_contract.result
+        assert shot.keyframe_contract.transition_from_previous
+        assert shot.keyframe_contract.transition_to_next
 
 
 def test_each_scene_duration_is_preserved(screenplay: ScreenplayPackage) -> None:
@@ -78,7 +80,8 @@ def test_generation_is_deterministic(screenplay: ScreenplayPackage) -> None:
 def test_prompt_requires_non_repeating_action_and_continuity(screenplay: ScreenplayPackage) -> None:
     package = RuleShotProvider(max_shot_duration=6).generate(screenplay)
     assert all("不循环、不重复动作" in shot.video_prompt for shot in package.shots)
-    assert all("连续性" in shot.video_prompt for shot in package.shots)
+    assert all("承接上一镜" in shot.video_prompt for shot in package.shots)
+    assert all("交给下一镜" in shot.video_prompt for shot in package.shots)
 
 
 def test_keeps_spoken_text_out_of_visual_prompts() -> None:

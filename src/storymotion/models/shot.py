@@ -6,13 +6,55 @@ from .base import CharacterId, SceneId, ShotId, StrictModel, duplicate_values
 
 
 class KeyframeContract(StrictModel):
-    """Observable requirements a generated keyframe must satisfy."""
+    """The complete, visual-only input contract for one generated shot.
 
-    required_visuals: list[str] = Field(min_length=1, max_length=8)
-    opening_state: str = Field(min_length=1, max_length=1000)
-    key_action: str = Field(min_length=1, max_length=1000)
-    visible_result: str = Field(min_length=1, max_length=1000)
-    continuity_anchor: str = Field(min_length=1, max_length=1500)
+    These fields describe observable frames rather than dialogue or narration.
+    Audio remains on :class:`Shot` and is never rendered into a media prompt.
+    """
+
+    character_appearances: list[str] = Field(min_length=1, max_length=8)
+    start_keyframe: str = Field(min_length=1, max_length=1000)
+    action: str = Field(min_length=1, max_length=1000)
+    result: str = Field(min_length=1, max_length=1000)
+    transition_from_previous: str = Field(min_length=1, max_length=1500)
+    transition_to_next: str = Field(min_length=1, max_length=1500)
+
+    @model_validator(mode="before")
+    @classmethod
+    def upgrade_v1_contract(cls, value):
+        """Read the original five-field contract without writing it again."""
+        if not isinstance(value, dict) or "character_appearances" in value:
+            return value
+        copied = dict(value)
+        continuity = str(copied.pop("continuity_anchor", "保持人物、服装、场景和光线一致。"))
+        copied["character_appearances"] = copied.pop("required_visuals", [])
+        copied["start_keyframe"] = copied.pop("opening_state", "")
+        copied["action"] = copied.pop("key_action", "")
+        copied["result"] = copied.pop("visible_result", "")
+        copied["transition_from_previous"] = continuity
+        copied["transition_to_next"] = continuity
+        return copied
+
+    @property
+    def required_visuals(self) -> list[str]:
+        """Compatibility alias for callers of the original contract."""
+        return self.character_appearances
+
+    @property
+    def opening_state(self) -> str:
+        return self.start_keyframe
+
+    @property
+    def key_action(self) -> str:
+        return self.action
+
+    @property
+    def visible_result(self) -> str:
+        return self.result
+
+    @property
+    def continuity_anchor(self) -> str:
+        return self.transition_to_next
 
 
 class Shot(StrictModel):

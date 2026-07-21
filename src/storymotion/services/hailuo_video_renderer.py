@@ -14,6 +14,7 @@ import imageio_ffmpeg
 from storymotion.models import ImageGenerationRequest, MediaTaskStatus, Shot, ShotPackage, VideoGenerationRequest
 from storymotion.providers import MiniMaxImageProvider
 from storymotion.providers.minimax_media import MiniMaxMediaError
+from .prompt_director import render_video_prompt_for_shot
 
 
 class VideoProvider(Protocol):
@@ -102,7 +103,7 @@ class HailuoVideoRenderer:
         else:
             task = self.provider.submit(
                 VideoGenerationRequest(
-                    prompt=shot.video_prompt,
+                    prompt=render_video_prompt_for_shot(shot),
                     duration=hailuo_duration(shot),
                     resolution="768P",
                     first_frame_image=self._data_url(first_frame) if first_frame else None,

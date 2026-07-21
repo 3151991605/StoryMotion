@@ -4,7 +4,7 @@ from .story_assembler import assemble_story_package
 from .creation_pipeline import CreationPipeline
 from .narrative_generator import NarrativeGenerator, NarrativeResult
 from .hailuo_video_renderer import HailuoJobInProgress, HailuoVideoRenderer
-from .prompt_director import direct_storyboard
+from .prompt_director import direct_storyboard, render_video_prompt_for_shot
 
 __all__ = [
     "DemoPipeline",
@@ -17,4 +17,5 @@ __all__ = [
     "HailuoVideoRenderer",
     "HailuoJobInProgress",
     "direct_storyboard",
+    "render_video_prompt_for_shot",
 ]

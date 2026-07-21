@@ -9,8 +9,10 @@ def test_renders_every_video_prompt_from_an_observable_keyframe_contract() -> No
     bundle = StoryMotionBundle.model_validate_json(fixture.read_text(encoding="utf-8"))
     directed = direct_storyboard(bundle.story, bundle.screenplay, bundle.storyboard)
 
-    assert all("必须出现" in shot.video_prompt for shot in directed.shots)
+    assert all("人物与画面要素" in shot.video_prompt for shot in directed.shots)
     assert all("唯一连续动作" in shot.video_prompt for shot in directed.shots)
-    assert all("可见结果" in shot.video_prompt for shot in directed.shots)
+    assert all("结束关键帧" in shot.video_prompt for shot in directed.shots)
+    assert all("承接上一镜" in shot.video_prompt for shot in directed.shots)
+    assert all("交给下一镜" in shot.video_prompt for shot in directed.shots)
     assert all("无文字、字幕、水印" in shot.image_prompt for shot in directed.shots)
     assert all("Vertical" not in shot.video_prompt for shot in directed.shots)

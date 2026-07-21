@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from storymotion.models import KeyframeContract, ScreenplayPackage, ShotPackage, StoryPackage
+from storymotion.models import KeyframeContract, ScreenplayPackage, Shot, ShotPackage, StoryPackage
 
 SHOT_TYPE_LABELS = {
     "wide": "全景",
@@ -26,11 +26,12 @@ def _chinese_camera_term(value: str, labels: dict[str, str]) -> str:
 def _render_image_prompt(contract: KeyframeContract, *, shot_type: str, camera: str) -> str:
     return (
         "竖屏 9:16，中国动画短剧关键帧。"
-        f"必须出现：{'；'.join(contract.required_visuals)}。"
-        f"开场状态：{contract.opening_state}"
-        f"关键动作：{contract.key_action}。"
-        f"可见结果：{contract.visible_result}。"
-        f"连续性：{contract.continuity_anchor}"
+        f"人物与画面要素：{'；'.join(contract.character_appearances)}。"
+        f"起始关键帧：{contract.start_keyframe}"
+        f"关键动作：{contract.action}。"
+        f"结束关键帧：{contract.result}。"
+        f"承接上一镜：{contract.transition_from_previous}"
+        f"交给下一镜：{contract.transition_to_next}"
         f"镜头：{_chinese_camera_term(shot_type, SHOT_TYPE_LABELS)}，"
         f"{_chinese_camera_term(camera, CAMERA_MOVEMENT_LABELS)}。"
         "画面清晰、因果关系明确；无文字、字幕、水印、标志。"
@@ -40,17 +41,32 @@ def _render_image_prompt(contract: KeyframeContract, *, shot_type: str, camera: 
 def _render_video_prompt(contract: KeyframeContract, *, shot_type: str, camera: str) -> str:
     return (
         "竖屏 9:16，高品质中国动画短剧。"
-        f"必须出现：{'；'.join(contract.required_visuals)}。"
-        f"开场状态：{contract.opening_state}"
-        f"唯一连续动作：{contract.key_action}。"
-        f"可见结果：{contract.visible_result}。"
+        f"人物与画面要素：{'；'.join(contract.character_appearances)}。"
+        f"起始关键帧：{contract.start_keyframe}"
+        f"唯一连续动作：{contract.action}。"
+        f"结束关键帧：{contract.result}。"
         f"镜头：{_chinese_camera_term(shot_type, SHOT_TYPE_LABELS)}，"
         f"{_chinese_camera_term(camera, CAMERA_MOVEMENT_LABELS)}。"
-        f"连续性：{contract.continuity_anchor}"
+        f"承接上一镜：{contract.transition_from_previous}"
+        f"交给下一镜：{contract.transition_to_next}"
         "一个连续镜头，动作必须从开场推进到可见结果；"
         "不循环、不重复动作、不随机切镜；"
         "无文字、字幕、水印、口播或口型表演。"
     )[:4900]
+
+
+def render_video_prompt_for_shot(shot: Shot) -> str:
+    """Build the only prompt that may be submitted to a video provider.
+
+    Stored prompts are presentation artifacts and can originate from legacy
+    JSON or third-party adapters.  The provider boundary instead uses the
+    visual contract, which deliberately has no dialogue or narration fields.
+    """
+    return _render_video_prompt(
+        shot.keyframe_contract,
+        shot_type=shot.shot_type,
+        camera=shot.camera_movement,
+    )
 
 
 def direct_storyboard(
@@ -68,11 +84,7 @@ def direct_storyboard(
                             shot_type=shot.shot_type,
                             camera=shot.camera_movement,
                         ),
-                        "video_prompt": _render_video_prompt(
-                            shot.keyframe_contract,
-                            shot_type=shot.shot_type,
-                            camera=shot.camera_movement,
-                        ),
+                        "video_prompt": render_video_prompt_for_shot(shot),
                     }
                 )
                 for shot in storyboard.shots
