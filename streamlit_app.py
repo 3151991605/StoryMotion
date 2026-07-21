@@ -19,7 +19,12 @@ from storymotion.providers import (
     TextGenerationError,
     UrllibMiniMaxMediaTransport,
 )
-from storymotion.services import CreationPipeline, HailuoVideoRenderer, NarrativeGenerator
+from storymotion.services import (
+    CreationPipeline,
+    HailuoVideoRenderer,
+    NarrativeGenerator,
+    VisualReferenceRenderer,
+)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -40,7 +45,9 @@ def configured_client() -> OpenAICompatibleChatClient | None:
             model=os.getenv("MINIMAX_TEXT_MODEL", "MiniMax-M2.7").strip(),
             base_url="https://api.minimaxi.com/v1",
             use_json_response_format=False,
-            max_completion_tokens=2048,
+            max_completion_tokens=8192,
+            extra_payload={"reasoning_split": True},
+            timeout_seconds=300.0,
         )
 
     key = os.getenv("LLM_API_KEY", "").strip()
@@ -71,6 +78,19 @@ def save_latest_bundle(bundle: StoryMotionBundle) -> None:
     )
 
 
+def find_saved_bundle() -> Path | None:
+    """Return the canonical saved bundle, or the most recent test output."""
+    if LATEST_BUNDLE_FILE.is_file():
+        return LATEST_BUNDLE_FILE
+
+    candidates = sorted(
+        ROOT.glob("outputs/*/storymotion_bundle.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
+
+
 def generate_video(bundle: StoryMotionBundle, *, preview_only: bool = False) -> Path:
     key = os.getenv("MINIMAX_VIDEO_API_KEY", "").strip()
     if not key:
@@ -92,6 +112,10 @@ def generate_video(bundle: StoryMotionBundle, *, preview_only: bool = False) -> 
         if image_key
         else None
     )
+    if image_provider is None:
+        raise RuntimeError(
+            "缺少 MINIMAX_API_KEY；逐镜头参考图需要图片生成额度，以保证角色和画风一致。"
+        )
     generated_root = ROOT / "outputs" / "generated"
     active_file = generated_root / "active_hailuo_job.json"
     if active_file.is_file():
@@ -104,8 +128,11 @@ def generate_video(bundle: StoryMotionBundle, *, preview_only: bool = False) -> 
         package = package.model_copy(
             update={"target_duration": int(first_shot.duration), "shots": [first_shot]}
         )
+    references = VisualReferenceRenderer(image_provider).prepare(
+        bundle, output_dir=output_dir
+    )
     return HailuoVideoRenderer(provider, image_provider=image_provider).render(
-        package, output_dir=output_dir
+        package, output_dir=output_dir, shot_keyframes=references.shot_frames
     )
 
 
@@ -141,10 +168,9 @@ with st.sidebar:
         st.session_state.bundle = StoryMotionBundle.model_validate_json(SAMPLE_FILE.read_text(encoding="utf-8"))
 
 bundle: StoryMotionBundle | None = st.session_state.get("bundle")
-if bundle is None and LATEST_BUNDLE_FILE.is_file():
-    bundle = StoryMotionBundle.model_validate_json(
-        LATEST_BUNDLE_FILE.read_text(encoding="utf-8")
-    )
+saved_bundle = find_saved_bundle()
+if bundle is None and saved_bundle is not None:
+    bundle = StoryMotionBundle.model_validate_json(saved_bundle.read_text(encoding="utf-8"))
     st.session_state.bundle = bundle
 if bundle is None:
     st.info("在左侧输入一句创意开始；也可以载入样例查看最终交付格式。")
@@ -180,14 +206,19 @@ with export_tab:
     payload = json.dumps(bundle.model_dump(mode="json"), ensure_ascii=False, indent=2)
     st.download_button("下载完整制作包 JSON", payload, file_name="storymotion_bundle.json", mime="application/json")
     has_video_key = bool(os.getenv("MINIMAX_VIDEO_API_KEY", "").strip())
+    has_image_key = bool(os.getenv("MINIMAX_API_KEY", "").strip())
     st.warning(
-        f"整集将提交 {len(bundle.storyboard.shots)} 个海螺视频任务，并为每个新场景生成关键帧。"
+        f"整集将提交 {len(bundle.storyboard.shots)} 个海螺视频任务，并预先生成角色、场景和每个镜头的参考图。"
         "不要重复点击：运行中的任务会自动复用，不会再次提交。"
     )
     preview = st.checkbox("先只生成首镜预览（推荐，消耗 1 个视频任务）")
     confirmed = st.checkbox("我确认此次生成会消耗海螺视频额度")
     label = "生成首镜预览 MP4" if preview else "生成整集 Hailuo MP4"
-    if st.button(label, type="primary", disabled=not (has_video_key and confirmed)):
+    if st.button(
+        label,
+        type="primary",
+        disabled=not (has_video_key and has_image_key and confirmed),
+    ):
         try:
             with st.spinner("正在逐镜头生成并合成 MP4；海螺任务通常需要数分钟，请保持页面打开…"):
                 st.session_state.video_path = generate_video(bundle, preview_only=preview)
@@ -196,6 +227,8 @@ with export_tab:
             st.error(f"视频生成失败：{exc}")
     if not has_video_key:
         st.warning("未配置 MINIMAX_VIDEO_API_KEY，暂不能生成海螺视频。")
+    if not has_image_key:
+        st.warning("未配置 MINIMAX_API_KEY，无法生成逐镜头参考图。")
     video_path = st.session_state.get("video_path")
     if video_path and Path(video_path).is_file():
         st.video(str(video_path))

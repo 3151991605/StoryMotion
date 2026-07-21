@@ -7,13 +7,14 @@ import json
 import subprocess
 import time
 from pathlib import Path
-from typing import Protocol
+from typing import Mapping, Protocol
 
 import imageio_ffmpeg
 
 from storymotion.models import ImageGenerationRequest, MediaTaskStatus, Shot, ShotPackage, VideoGenerationRequest
 from storymotion.providers import MiniMaxImageProvider
 from storymotion.providers.minimax_media import MiniMaxMediaError
+from .prompt_director import render_video_prompt_for_shot
 
 
 class VideoProvider(Protocol):
@@ -45,7 +46,13 @@ class HailuoVideoRenderer:
         self.poll_interval_seconds = poll_interval_seconds
         self.overall_timeout_seconds = overall_timeout_seconds
 
-    def render(self, package: ShotPackage, *, output_dir: Path) -> Path:
+    def render(
+        self,
+        package: ShotPackage,
+        *,
+        output_dir: Path,
+        shot_keyframes: Mapping[str, Path] | None = None,
+    ) -> Path:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         state_file = output_dir / "render_state.json"
@@ -58,7 +65,10 @@ class HailuoVideoRenderer:
         previous_last_frame: Path | None = None
         previous_scene_id: str | None = None
         for shot in package.shots:
-            first_frame = previous_last_frame if shot.scene_id == previous_scene_id else None
+            chained_frame = previous_last_frame if shot.scene_id == previous_scene_id else None
+            first_frame = self._first_frame_for_shot(
+                shot, shot_keyframes or {}, chained_frame
+            )
             clip = self._render_shot(
                 shot, output_dir, deadline, first_frame, state, state_file
             )
@@ -102,7 +112,7 @@ class HailuoVideoRenderer:
         else:
             task = self.provider.submit(
                 VideoGenerationRequest(
-                    prompt=shot.video_prompt,
+                    prompt=render_video_prompt_for_shot(shot),
                     duration=hailuo_duration(shot),
                     resolution="768P",
                     first_frame_image=self._data_url(first_frame) if first_frame else None,
@@ -126,6 +136,16 @@ class HailuoVideoRenderer:
         shot_state["status"] = "downloaded"
         self._save_state(state_file, state)
         return clip
+
+    @staticmethod
+    def _first_frame_for_shot(
+        shot: Shot, shot_keyframes: Mapping[str, Path], chained_frame: Path | None
+    ) -> Path | None:
+        """A planned shot composition is stronger evidence than a prior generated frame."""
+        planned = shot_keyframes.get(shot.shot_id)
+        if planned is not None and Path(planned).is_file():
+            return Path(planned)
+        return chained_frame
 
     @staticmethod
     def _load_state(state_file: Path, package: ShotPackage) -> dict:

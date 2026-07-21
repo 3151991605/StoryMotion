@@ -144,12 +144,16 @@ def adapt_penshot_result(
                 image_prompt=fragment.prompt,
                 video_prompt=fragment.prompt,
                 keyframe_contract=KeyframeContract(
-                    required_visuals=[locations[scene.location_id].name],
-                    opening_state=fragment.prompt,
-                    key_action=scene.action,
-                    visible_result=f"{scene.action} 的结果在画面中清晰可见。",
-                    continuity_anchor=(
+                    character_appearances=[locations[scene.location_id].name],
+                    start_keyframe=fragment.prompt,
+                    action=scene.action,
+                    result=f"{scene.action} 的结果在画面中清晰可见。",
+                    transition_from_previous=(
                         f"保持{locations[scene.location_id].name}内的人物、服装、场景和光线一致。"
+                    ),
+                    transition_to_next=(
+                        f"保持{locations[scene.location_id].name}内的人物、服装、场景和光线一致；"
+                        "下一镜从动作结果继续。"
                     ),
                 ),
                 negative_prompt=fragment.negative_prompt,

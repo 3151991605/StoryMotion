@@ -1,7 +1,8 @@
-from storymotion.models import Shot
+from storymotion.models import KeyframeContract, MediaTaskStatus, Shot, VideoTask
 import pytest
 
 from storymotion.services.hailuo_video_renderer import HailuoJobInProgress, HailuoVideoRenderer, hailuo_duration
+from storymotion.providers.minimax_media import MiniMaxMediaError
 
 
 def make_shot(duration: float) -> Shot:
@@ -23,3 +24,62 @@ def test_refuses_a_second_active_job(tmp_path) -> None:
     HailuoVideoRenderer._claim_job(active, tmp_path / "first")
     with pytest.raises(HailuoJobInProgress):
         HailuoVideoRenderer._claim_job(active, tmp_path / "second")
+
+
+def test_prefers_planned_shot_keyframe_over_previous_clip_frame(tmp_path) -> None:
+    shot = make_shot(6)
+    planned = tmp_path / "planned.png"
+    previous = tmp_path / "previous.jpg"
+    planned.write_bytes(b"planned")
+
+    assert HailuoVideoRenderer._first_frame_for_shot(
+        shot, {shot.shot_id: planned}, previous
+    ) == planned
+
+
+class RecordingFailedProvider:
+    def __init__(self) -> None:
+        self.requests = []
+
+    def submit(self, request):
+        self.requests.append(request)
+        return VideoTask(
+            provider="test",
+            task_id="task_001",
+            status=MediaTaskStatus.FAILED,
+            error="intentional test failure",
+        )
+
+
+def test_renderer_submits_contract_prompt_not_stored_dialogue(tmp_path) -> None:
+    provider = RecordingFailedProvider()
+    renderer = HailuoVideoRenderer(provider, poll_interval_seconds=0)
+    contract = KeyframeContract(
+        character_appearances=["林辰：黑色短发，深灰宗门服"],
+        start_keyframe="林辰持剑站在破碎石柱前。",
+        action="林辰挥剑格挡玄兽利爪。",
+        result="玄兽利爪被剑锋弹开。",
+        transition_from_previous="承接上一镜，林辰已拔剑并面向玄兽。",
+        transition_to_next="下一镜从利爪弹开、林辰站稳的画面继续。",
+    )
+    shot = make_shot(6).model_copy(
+        update={
+            "video_prompt": "玄兽低声说：你的兄长并没有死。",
+            "keyframe_contract": contract,
+        }
+    )
+    state_file = tmp_path / "render_state.json"
+
+    with pytest.raises(MiniMaxMediaError, match="intentional test failure"):
+        renderer._render_shot(
+            shot,
+            tmp_path,
+            deadline=float("inf"),
+            first_frame=None,
+            state={"shots": {}},
+            state_file=state_file,
+        )
+
+    submitted_prompt = provider.requests[0].prompt
+    assert "你的兄长并没有死" not in submitted_prompt
+    assert "唯一连续动作：林辰挥剑格挡玄兽利爪" in submitted_prompt
