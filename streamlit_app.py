@@ -131,8 +131,14 @@ def generate_video(bundle: StoryMotionBundle, *, preview_only: bool = False) -> 
     references = VisualReferenceRenderer(image_provider).prepare(
         bundle, output_dir=output_dir
     )
-    return HailuoVideoRenderer(provider, image_provider=image_provider).render(
-        package, output_dir=output_dir, shot_keyframes=references.shot_frames
+    return HailuoVideoRenderer(
+        provider,
+        image_provider=image_provider,
+        character_references=references.character_frames,
+    ).render(
+        package,
+        output_dir=output_dir,
+        shot_keyframes=references.shot_frames,
     )
 
 

@@ -38,11 +38,16 @@ class HailuoVideoRenderer:
         provider: VideoProvider,
         *,
         image_provider: MiniMaxImageProvider | None = None,
+        character_references: Mapping[str, Path] | None = None,
         poll_interval_seconds: float = 10.0,
         overall_timeout_seconds: float = 900.0,
     ) -> None:
         self.provider = provider
         self.image_provider = image_provider
+        self.character_references = {
+            character_id: Path(path)
+            for character_id, path in (character_references or {}).items()
+        }
         self.poll_interval_seconds = poll_interval_seconds
         self.overall_timeout_seconds = overall_timeout_seconds
 
@@ -101,8 +106,17 @@ class HailuoVideoRenderer:
             if first_file.is_file():
                 first_frame = first_file
             else:
+                reference_image = self._character_reference_for(shot)
                 image = self.image_provider.generate(
-                    ImageGenerationRequest(prompt=shot.image_prompt, aspect_ratio="9:16"),
+                    ImageGenerationRequest(
+                        prompt=shot.image_prompt,
+                        aspect_ratio="9:16",
+                        reference_image=(
+                            self._data_url(reference_image)
+                            if reference_image is not None
+                            else None
+                        ),
+                    ),
                     output_file=first_file,
                 )
                 first_frame = image.path
@@ -136,6 +150,13 @@ class HailuoVideoRenderer:
         shot_state["status"] = "downloaded"
         self._save_state(state_file, state)
         return clip
+
+    def _character_reference_for(self, shot: Shot) -> Path | None:
+        for character_id in shot.character_ids:
+            reference = self.character_references.get(character_id)
+            if reference is not None and reference.is_file():
+                return reference
+        return None
 
     @staticmethod
     def _first_frame_for_shot(

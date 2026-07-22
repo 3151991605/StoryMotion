@@ -1,4 +1,12 @@
-from storymotion.models import KeyframeContract, MediaTaskStatus, Shot, VideoTask
+from pathlib import Path
+
+from storymotion.models import (
+    GeneratedImage,
+    KeyframeContract,
+    MediaTaskStatus,
+    Shot,
+    VideoTask,
+)
 import pytest
 
 from storymotion.services.hailuo_video_renderer import HailuoJobInProgress, HailuoVideoRenderer, hailuo_duration
@@ -9,6 +17,7 @@ def make_shot(duration: float) -> Shot:
     return Shot(
         shot_id="shot_001", scene_id="scene_001", duration=duration,
         shot_type="medium", camera_movement="static", visual_description="测试镜头",
+        character_ids=["char_001"],
         image_prompt="test image", video_prompt="test video",
     )
 
@@ -51,6 +60,22 @@ class RecordingFailedProvider:
         )
 
 
+class RecordingImageProvider:
+    def __init__(self) -> None:
+        self.requests = []
+
+    def generate(self, request, *, output_file: Path) -> GeneratedImage:
+        self.requests.append(request)
+        output_file.write_bytes(b"\xff\xd8\xff\xe0first-frame")
+        return GeneratedImage(
+            provider="test",
+            model="test-image",
+            request_id="image_001",
+            path=output_file,
+            media_type="image/jpeg",
+        )
+
+
 def test_renderer_submits_contract_prompt_not_stored_dialogue(tmp_path) -> None:
     provider = RecordingFailedProvider()
     renderer = HailuoVideoRenderer(provider, poll_interval_seconds=0)
@@ -83,3 +108,29 @@ def test_renderer_submits_contract_prompt_not_stored_dialogue(tmp_path) -> None:
     submitted_prompt = provider.requests[0].prompt
     assert "你的兄长并没有死" not in submitted_prompt
     assert "唯一连续动作：林辰挥剑格挡玄兽利爪" in submitted_prompt
+
+
+def test_renderer_uses_character_reference_when_making_scene_first_frame(tmp_path) -> None:
+    reference = tmp_path / "character_reference.jpg"
+    reference.write_bytes(b"\xff\xd8\xff\xe0reference")
+    video_provider = RecordingFailedProvider()
+    image_provider = RecordingImageProvider()
+    renderer = HailuoVideoRenderer(
+        video_provider,
+        image_provider=image_provider,
+        character_references={"char_001": reference},
+        poll_interval_seconds=0,
+    )
+
+    with pytest.raises(MiniMaxMediaError, match="intentional test failure"):
+        renderer._render_shot(
+            make_shot(6),
+            tmp_path,
+            deadline=float("inf"),
+            first_frame=None,
+            state={"shots": {}},
+            state_file=tmp_path / "render_state.json",
+        )
+
+    assert len(image_provider.requests) == 1
+    assert image_provider.requests[0].reference_image == "data:image/jpeg;base64,/9j/4HJlZmVyZW5jZQ=="
