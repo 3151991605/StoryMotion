@@ -19,7 +19,12 @@ from storymotion.providers import (
     TextGenerationError,
     UrllibMiniMaxMediaTransport,
 )
-from storymotion.services import CreationPipeline, HailuoVideoRenderer, NarrativeGenerator
+from storymotion.services import (
+    CharacterReferenceGenerator,
+    CreationPipeline,
+    HailuoVideoRenderer,
+    NarrativeGenerator,
+)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -98,13 +103,31 @@ def generate_video(bundle: StoryMotionBundle, *, preview_only: bool = False) -> 
         output_dir = Path(json.loads(active_file.read_text(encoding="utf-8"))["output_dir"])
     else:
         output_dir = generated_root / uuid.uuid4().hex
+    protagonist = next(
+        (
+            character
+            for character in bundle.story.characters
+            if character.name == bundle.brief.protagonist_name
+        ),
+        bundle.story.characters[0],
+    )
+    character_references = {}
+    if image_provider is not None:
+        reference = CharacterReferenceGenerator(image_provider).generate(
+            protagonist, output_dir=output_dir / "character_references"
+        )
+        character_references[protagonist.id] = reference.path
     package = bundle.storyboard
     if preview_only:
         first_shot = package.shots[0]
         package = package.model_copy(
             update={"target_duration": int(first_shot.duration), "shots": [first_shot]}
         )
-    return HailuoVideoRenderer(provider, image_provider=image_provider).render(
+    return HailuoVideoRenderer(
+        provider,
+        image_provider=image_provider,
+        character_references=character_references,
+    ).render(
         package, output_dir=output_dir
     )
 
