@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from pydantic import Field, model_validator
 
-from .base import CharacterId, SceneId, ShotId, StrictModel, duplicate_values
+from .base import CharacterId, PropId, SceneId, ShotId, StrictModel, duplicate_values
 
 
 class KeyframeContract(StrictModel):
-    """The complete, visual-only input contract for one generated shot.
+    """The complete visual-only contract for a generated shot.
 
-    These fields describe observable frames rather than dialogue or narration.
-    Audio remains on :class:`Shot` and is never rendered into a media prompt.
+    Dialogue and narration remain on :class:`Shot`; a media prompt is always
+    rebuilt from this contract at the provider boundary.
     """
 
     character_appearances: list[str] = Field(min_length=1, max_length=8)
@@ -22,11 +22,13 @@ class KeyframeContract(StrictModel):
     @model_validator(mode="before")
     @classmethod
     def upgrade_v1_contract(cls, value):
-        """Read the original five-field contract without writing it again."""
+        """Read persisted five-field contracts without rewriting old bundles."""
         if not isinstance(value, dict) or "character_appearances" in value:
             return value
         copied = dict(value)
-        continuity = str(copied.pop("continuity_anchor", "保持人物、服装、场景和光线一致。"))
+        continuity = str(
+            copied.pop("continuity_anchor", "保持人物、服装、场景和光线一致。")
+        )
         copied["character_appearances"] = copied.pop("required_visuals", [])
         copied["start_keyframe"] = copied.pop("opening_state", "")
         copied["action"] = copied.pop("key_action", "")
@@ -35,9 +37,10 @@ class KeyframeContract(StrictModel):
         copied["transition_to_next"] = continuity
         return copied
 
+    # Compatibility aliases keep all current prompt and reference services
+    # working with saved bundles generated before the contract expansion.
     @property
     def required_visuals(self) -> list[str]:
-        """Compatibility alias for callers of the original contract."""
         return self.character_appearances
 
     @property
@@ -65,6 +68,7 @@ class Shot(StrictModel):
     camera_movement: str = Field(min_length=1, max_length=200)
     visual_description: str = Field(min_length=1, max_length=3000)
     character_ids: list[CharacterId] = Field(default_factory=list, max_length=6)
+    prop_ids: list[PropId] = Field(default_factory=list, max_length=8)
     image_prompt: str = Field(min_length=1, max_length=5000)
     video_prompt: str = Field(min_length=1, max_length=5000)
     keyframe_contract: KeyframeContract
@@ -93,6 +97,9 @@ class Shot(StrictModel):
         duplicates = duplicate_values(self.character_ids)
         if duplicates:
             raise ValueError(f"duplicate shot character IDs: {sorted(duplicates)}")
+        duplicate_props = duplicate_values(self.prop_ids)
+        if duplicate_props:
+            raise ValueError(f"duplicate shot prop IDs: {sorted(duplicate_props)}")
         return self
 
 

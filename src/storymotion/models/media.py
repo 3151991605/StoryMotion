@@ -24,7 +24,22 @@ class ImageGenerationRequest(StrictModel):
     prompt: str = Field(min_length=1, max_length=1500)
     aspect_ratio: AspectRatio = "9:16"
     reference_image: str | None = Field(default=None, min_length=1, max_length=30_000_000)
+    reference_images: list[str] = Field(default_factory=list, max_length=9)
     seed: int | None = Field(default=None, ge=0)
+
+    @field_validator("reference_images")
+    @classmethod
+    def validate_reference_images(cls, values: list[str]) -> list[str]:
+        if any(not isinstance(value, str) or not value or len(value) > 30_000_000 for value in values):
+            raise ValueError("reference images must be non-empty strings of at most 30 MB")
+        return values
+
+    @model_validator(mode="after")
+    def validate_total_reference_count(self) -> "ImageGenerationRequest":
+        total = len(self.reference_images) + int(self.reference_image is not None)
+        if total > 9:
+            raise ValueError("image generation supports at most 9 reference images")
+        return self
 
 
 class GeneratedImage(StrictModel):

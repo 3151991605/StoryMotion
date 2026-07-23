@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 CharacterId = Annotated[str, Field(pattern=r"^char_[A-Za-z0-9_-]+$")]
 LocationId = Annotated[str, Field(pattern=r"^loc_[A-Za-z0-9_-]+$")]
+PropId = Annotated[str, Field(pattern=r"^prop_[A-Za-z0-9_-]+$")]
 SceneId = Annotated[str, Field(pattern=r"^scene_[A-Za-z0-9_-]+$")]
 ShotId = Annotated[str, Field(pattern=r"^shot_[A-Za-z0-9_-]+$")]
 

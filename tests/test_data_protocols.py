@@ -227,6 +227,36 @@ def test_character_free_establishing_shot_is_allowed(valid_bundle_data: dict) ->
     assert bundle.storyboard.shots[0].character_ids == []
 
 
+def test_prop_contract_is_validated_across_story_scene_and_shot(
+    valid_bundle_data: dict,
+) -> None:
+    data = deepcopy(valid_bundle_data)
+    prop = {
+        "id": "prop_001",
+        "name": "裂纹手机",
+        "visual_description": "黑色窄边手机，透明磨损保护壳，背面左上双摄",
+        "continuity_features": ["黑色机身", "透明保护壳", "左上双摄"],
+        "aliases": ["手机", "电话"],
+    }
+    data["story"]["props"] = [prop]
+    data["screenplay"]["props"] = [prop]
+    data["screenplay"]["scenes"][0]["prop_ids"] = ["prop_001"]
+    data["storyboard"]["shots"][0]["prop_ids"] = ["prop_001"]
+
+    bundle = StoryMotionBundle.model_validate(data)
+
+    assert bundle.story.props[0].name == "裂纹手机"
+    assert bundle.screenplay.scenes[0].prop_ids == ["prop_001"]
+    assert bundle.storyboard.shots[0].prop_ids == ["prop_001"]
+
+
+def test_unknown_shot_prop_reference_is_rejected(valid_bundle_data: dict) -> None:
+    data = deepcopy(valid_bundle_data)
+    data["storyboard"]["shots"][0]["prop_ids"] = ["prop_missing"]
+    with pytest.raises(ValidationError, match="unknown prop"):
+        StoryMotionBundle.model_validate(data)
+
+
 def test_json_fixture_round_trip() -> None:
     bundle = StoryMotionBundle.model_validate_json(
         FIXTURE_PATH.read_text(encoding="utf-8")

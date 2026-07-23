@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from .base import CharacterId, LocationId, StrictModel, duplicate_values
+from .base import CharacterId, LocationId, PropId, StrictModel, duplicate_values
 
 
 CANONICAL_BEAT_ORDER = (
@@ -39,6 +39,16 @@ class Location(StrictModel):
     id: LocationId
     name: str = Field(min_length=1, max_length=120)
     visual_description: str = Field(min_length=1, max_length=1000)
+
+
+class StoryProp(StrictModel):
+    """A plot-bearing object whose design must remain fixed across shots."""
+
+    id: PropId
+    name: str = Field(min_length=1, max_length=120)
+    visual_description: str = Field(min_length=1, max_length=1000)
+    continuity_features: list[str] = Field(default_factory=list, max_length=8)
+    aliases: list[str] = Field(default_factory=list, max_length=8)
 
 
 class Worldview(StrictModel):
@@ -83,6 +93,7 @@ class StoryPackage(StrictModel):
     target_duration: int = Field(ge=15, le=180)
     worldview: Worldview
     characters: list[Character] = Field(min_length=1, max_length=6)
+    props: list[StoryProp] = Field(default_factory=list, max_length=8)
     beats: list[PlotBeat] = Field(min_length=1, max_length=10)
     story_text: str = Field(min_length=1, max_length=10000)
 
@@ -98,5 +109,11 @@ class StoryPackage(StrictModel):
         duplicate_names = duplicate_values(character.name for character in self.characters)
         if duplicate_names:
             raise ValueError(f"duplicate character names: {sorted(duplicate_names)}")
+        duplicate_prop_ids = duplicate_values(prop.id for prop in self.props)
+        if duplicate_prop_ids:
+            raise ValueError(f"duplicate prop IDs: {sorted(duplicate_prop_ids)}")
+        duplicate_prop_names = duplicate_values(prop.name for prop in self.props)
+        if duplicate_prop_names:
+            raise ValueError(f"duplicate prop names: {sorted(duplicate_prop_names)}")
         validate_plot_beats(self.beats, self.target_duration)
         return self

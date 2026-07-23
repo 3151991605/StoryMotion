@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from storymotion.models import ScreenplayPackage, StoryMotionBundle
+from storymotion.models import ScreenplayPackage, StoryMotionBundle, StoryProp
 from storymotion.providers import RuleShotProvider
 
 
@@ -49,6 +49,7 @@ def test_preserves_scene_characters_and_prompt_context(
     for shot in package.shots:
         scene = scene_by_id[shot.scene_id]
         assert shot.character_ids == scene.characters
+        assert shot.prop_ids == scene.prop_ids
         assert shot.image_prompt.strip()
         assert shot.video_prompt.strip()
         assert "竖屏 9:16" in shot.image_prompt
@@ -111,3 +112,30 @@ def test_keeps_spoken_text_out_of_visual_prompts() -> None:
 def test_rejects_non_positive_shot_duration() -> None:
     with pytest.raises(ValueError, match="max_shot_duration"):
         RuleShotProvider(max_shot_duration=0)
+
+
+def test_carries_prop_identity_into_every_shot_from_scene(
+    screenplay: ScreenplayPackage,
+) -> None:
+    phone = StoryProp(
+        id="prop_phone",
+        name="林夏的手机",
+        visual_description="黑色窄边手机，透明裂纹保护壳，左上双摄",
+        continuity_features=["透明裂纹保护壳", "左上双摄"],
+        aliases=["手机"],
+    )
+    scenes = list(screenplay.scenes)
+    scenes[0] = scenes[0].model_copy(update={"prop_ids": [phone.id]})
+    screenplay = screenplay.model_copy(
+        update={"props": [phone], "scenes": scenes}
+    )
+
+    package = RuleShotProvider(max_shot_duration=6).generate(screenplay)
+    scene_shots = [
+        shot for shot in package.shots if shot.scene_id == scenes[0].scene_id
+    ]
+
+    assert scene_shots
+    assert all(shot.prop_ids == [phone.id] for shot in scene_shots)
+    assert all("透明裂纹保护壳" in shot.image_prompt for shot in scene_shots)
+    assert all("关键道具固定" in shot.video_prompt for shot in scene_shots)

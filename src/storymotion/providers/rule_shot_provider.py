@@ -57,6 +57,7 @@ def _action_beat(action: str, part_index: int, part_count: int) -> str:
 def _keyframe_contract(
     *,
     character_visuals: list[str],
+    prop_visuals: list[str],
     location_name: str,
     location_description: str,
     action: str,
@@ -65,7 +66,7 @@ def _keyframe_contract(
     part_index: int,
     part_count: int,
 ) -> KeyframeContract:
-    required_visuals = [location_name, *character_visuals] or [location_name]
+    required_visuals = [location_name, *character_visuals, *prop_visuals]
     if part_index == 0:
         opening_state = f"{location_name}中，动作发生前的紧张状态清晰可见。"
     else:
@@ -76,7 +77,8 @@ def _keyframe_contract(
         visible_result = "动作推进后，人物或环境出现肉眼可见的新变化。"
     continuity_anchor = (
         f"场景固定为{location_name}（{location_description}）；"
-        f"人物外观固定为{'；'.join(character_visuals) or '无可见人物'}。"
+        f"人物外观固定为{'；'.join(character_visuals) or '无可见人物'}；"
+        f"关键道具固定为{'；'.join(prop_visuals) or '无关键道具'}。"
     )
     return KeyframeContract(
         character_appearances=required_visuals,
@@ -103,6 +105,7 @@ class RuleShotProvider:
     def generate(self, screenplay: ScreenplayPackage) -> ShotPackage:
         characters = {character.id: character for character in screenplay.characters}
         locations = {location.id: location for location in screenplay.locations}
+        props = {prop.id: prop for prop in screenplay.props}
         shots: list[Shot] = []
 
         for scene in screenplay.scenes:
@@ -120,6 +123,14 @@ class RuleShotProvider:
                 f"{characters[character_id].name}：{characters[character_id].visual_prompt_zh}"
                 for character_id in scene.characters
             ]
+            prop_visuals = [
+                (
+                    f"{props[prop_id].name}：{props[prop_id].visual_description}；"
+                    f"不可变细节={','.join(props[prop_id].continuity_features) or '以标准图为准'}"
+                )
+                for prop_id in scene.prop_ids
+                if prop_id in props
+            ]
 
             for part_index in range(part_count):
                 duration = min(self.max_shot_duration, remaining)
@@ -134,6 +145,7 @@ class RuleShotProvider:
                 effect = _dramatic_effect(scene.action, scene.emotion)
                 contract = _keyframe_contract(
                     character_visuals=character_visuals,
+                    prop_visuals=prop_visuals,
                     location_name=location.name,
                     location_description=location.visual_description,
                     action=scene.action,
@@ -144,6 +156,7 @@ class RuleShotProvider:
                 )
                 visual_description = (
                     f"{location.name}，{focus}，{part_label}，情绪：{scene.emotion}。"
+                    f"关键道具：{'；'.join(prop_visuals) or '无'}。"
                 )
                 image_prompt = (
                     "竖屏 9:16，中国动画短剧关键帧。"
@@ -153,6 +166,7 @@ class RuleShotProvider:
                     f"结束关键帧：{contract.result}。"
                     f"承接上一镜：{contract.transition_from_previous}"
                     f"交给下一镜：{contract.transition_to_next}"
+                    f"连续性：{contract.transition_to_next}"
                     f"镜头：{SHOT_TYPE_LABELS[shot_type]}，"
                     f"{CAMERA_MOVEMENT_LABELS[camera_movement]}。特效：{effect}。"
                     "画面清晰，无屏幕文字、字幕或水印。"
@@ -167,6 +181,7 @@ class RuleShotProvider:
                     f"{CAMERA_MOVEMENT_LABELS[camera_movement]}。特效：{effect}。"
                     f"承接上一镜：{contract.transition_from_previous}"
                     f"交给下一镜：{contract.transition_to_next}"
+                    f"连续性：{contract.transition_to_next}"
                     "一个连续镜头，不循环、不重复动作、不随机切镜；"
                     "不出现文字、字幕、水印、口播或口型表演。"
                 )
@@ -182,6 +197,7 @@ class RuleShotProvider:
                         camera_movement=camera_movement,
                         visual_description=visual_description,
                         character_ids=scene.characters,
+                        prop_ids=scene.prop_ids,
                         image_prompt=image_prompt,
                         video_prompt=video_prompt,
                         keyframe_contract=contract,

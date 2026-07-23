@@ -1,10 +1,11 @@
-# Local secrets
+# Local secrets (all real environment files stay local; only the empty template is tracked)
 .env
 .env.*
 !.env.example
 
 # Python
 .venv/
+.runtime_frontend_venv/
 .tools/
 __pycache__/
 *.py[cod]

@@ -29,6 +29,13 @@ from .penshot_sidecar import (
 )
 from .rule_shot_provider import RuleShotProvider
 from .openai_compatible import OpenAICompatibleChatClient, TextGenerationError
+from .wan_media import (
+    UrllibWanMediaTransport,
+    WanImageProvider,
+    WanMediaError,
+    WanMediaProtocolError,
+    WanMediaTransportError,
+)
 
 __all__ = [
     "FallbackShotProvider",
@@ -57,4 +64,9 @@ __all__ = [
     "UrllibMiniMaxChatTransport",
     "UrllibMiniMaxMediaTransport",
     "TextGenerationError",
+    "UrllibWanMediaTransport",
+    "WanImageProvider",
+    "WanMediaError",
+    "WanMediaProtocolError",
+    "WanMediaTransportError",
 ]

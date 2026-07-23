@@ -153,7 +153,7 @@ def adapt_penshot_result(
                     ),
                     transition_to_next=(
                         f"保持{locations[scene.location_id].name}内的人物、服装、场景和光线一致；"
-                        f"下一镜从动作结果继续。"
+                        "下一镜从动作结果继续。"
                     ),
                 ),
                 negative_prompt=fragment.negative_prompt,

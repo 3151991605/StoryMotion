@@ -12,7 +12,7 @@ from typing import Mapping, Protocol
 import imageio_ffmpeg
 
 from storymotion.models import ImageGenerationRequest, MediaTaskStatus, Shot, ShotPackage, VideoGenerationRequest
-from storymotion.providers import MiniMaxImageProvider
+from storymotion.providers.media import ImageProvider
 from storymotion.providers.minimax_media import MiniMaxMediaError
 from .prompt_director import render_video_prompt_for_shot
 
@@ -37,7 +37,7 @@ class HailuoVideoRenderer:
         self,
         provider: VideoProvider,
         *,
-        image_provider: MiniMaxImageProvider | None = None,
+        image_provider: ImageProvider | None = None,
         character_references: Mapping[str, Path] | None = None,
         poll_interval_seconds: float = 10.0,
         overall_timeout_seconds: float = 900.0,
@@ -51,7 +51,13 @@ class HailuoVideoRenderer:
         self.poll_interval_seconds = poll_interval_seconds
         self.overall_timeout_seconds = overall_timeout_seconds
 
-    def render(self, package: ShotPackage, *, output_dir: Path) -> Path:
+    def render(
+        self,
+        package: ShotPackage,
+        *,
+        output_dir: Path,
+        shot_keyframes: Mapping[str, Path] | None = None,
+    ) -> Path:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         state_file = output_dir / "render_state.json"
@@ -64,7 +70,10 @@ class HailuoVideoRenderer:
         previous_last_frame: Path | None = None
         previous_scene_id: str | None = None
         for shot in package.shots:
-            first_frame = previous_last_frame if shot.scene_id == previous_scene_id else None
+            chained_frame = previous_last_frame if shot.scene_id == previous_scene_id else None
+            first_frame = self._first_frame_for_shot(
+                shot, shot_keyframes or {}, chained_frame
+            )
             clip = self._render_shot(
                 shot, output_dir, deadline, first_frame, state, state_file
             )
@@ -148,6 +157,16 @@ class HailuoVideoRenderer:
             if reference is not None and reference.is_file():
                 return reference
         return None
+
+    @staticmethod
+    def _first_frame_for_shot(
+        shot: Shot, shot_keyframes: Mapping[str, Path], chained_frame: Path | None
+    ) -> Path | None:
+        """A planned shot composition is stronger evidence than a prior generated frame."""
+        planned = shot_keyframes.get(shot.shot_id)
+        if planned is not None and Path(planned).is_file():
+            return Path(planned)
+        return chained_frame
 
     @staticmethod
     def _load_state(state_file: Path, package: ShotPackage) -> dict:

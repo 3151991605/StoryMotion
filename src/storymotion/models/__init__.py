@@ -16,6 +16,7 @@ from .story import (
     Character,
     Location,
     PlotBeat,
+    StoryProp,
     StoryPackage,
     Worldview,
 )
@@ -39,6 +40,7 @@ __all__ = [
     "Shot",
     "ShotPackage",
     "StoryMotionBundle",
+    "StoryProp",
     "StoryDraft",
     "StoryPackage",
     "VideoGenerationRequest",

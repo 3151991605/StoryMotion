@@ -6,6 +6,7 @@ from .narrative_generator import NarrativeGenerator, NarrativeResult
 from .hailuo_video_renderer import HailuoJobInProgress, HailuoVideoRenderer
 from .character_reference import CharacterReferenceGenerator, protagonist_reference_prompt
 from .prompt_director import direct_storyboard, render_video_prompt_for_shot
+from .visual_reference_renderer import VisualReferenceAssets, VisualReferenceRenderer
 
 __all__ = [
     "DemoPipeline",
@@ -20,5 +21,7 @@ __all__ = [
     "CharacterReferenceGenerator",
     "direct_storyboard",
     "render_video_prompt_for_shot",
+    "VisualReferenceAssets",
+    "VisualReferenceRenderer",
     "protagonist_reference_prompt",
 ]

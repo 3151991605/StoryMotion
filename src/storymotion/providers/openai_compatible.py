@@ -25,6 +25,7 @@ class OpenAICompatibleChatClient:
     timeout_seconds: float = 120.0
     use_json_response_format: bool = True
     max_completion_tokens: int | None = None
+    extra_payload: dict[str, Any] | None = None
 
     def complete(self, *, system: str, user: str) -> str:
         if not self.api_key.strip() or not self.model.strip():
@@ -42,6 +43,13 @@ class OpenAICompatibleChatClient:
             payload["response_format"] = {"type": "json_object"}
         if self.max_completion_tokens is not None:
             payload["max_completion_tokens"] = self.max_completion_tokens
+        if self.extra_payload:
+            reserved = set(payload).intersection(self.extra_payload)
+            if reserved:
+                raise ValueError(
+                    f"extra_payload cannot override reserved fields: {sorted(reserved)}"
+                )
+            payload.update(self.extra_payload)
         request = Request(
             endpoint,
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
