@@ -239,6 +239,8 @@ def _image_type(raw: bytes) -> str | None:
 
 
 class MiniMaxImageProvider:
+    max_reference_images = 1
+
     def __init__(
         self,
         transport: MiniMaxMediaTransport,
@@ -262,9 +264,12 @@ class MiniMaxImageProvider:
             "prompt_optimizer": False,
             "aigc_watermark": False,
         }
-        if request.reference_image is not None:
+        reference_image = request.reference_image or next(
+            iter(request.reference_images), None
+        )
+        if reference_image is not None:
             payload["subject_reference"] = [
-                {"type": "character", "image_file": request.reference_image}
+                {"type": "character", "image_file": reference_image}
             ]
         if request.seed is not None:
             payload["seed"] = request.seed

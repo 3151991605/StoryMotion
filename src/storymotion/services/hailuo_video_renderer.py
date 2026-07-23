@@ -12,7 +12,7 @@ from typing import Mapping, Protocol
 import imageio_ffmpeg
 
 from storymotion.models import ImageGenerationRequest, MediaTaskStatus, Shot, ShotPackage, VideoGenerationRequest
-from storymotion.providers import MiniMaxImageProvider
+from storymotion.providers.media import ImageProvider
 from storymotion.providers.minimax_media import MiniMaxMediaError
 from .prompt_director import render_video_prompt_for_shot
 
@@ -37,7 +37,7 @@ class HailuoVideoRenderer:
         self,
         provider: VideoProvider,
         *,
-        image_provider: MiniMaxImageProvider | None = None,
+        image_provider: ImageProvider | None = None,
         character_references: Mapping[str, Path] | None = None,
         poll_interval_seconds: float = 10.0,
         overall_timeout_seconds: float = 900.0,

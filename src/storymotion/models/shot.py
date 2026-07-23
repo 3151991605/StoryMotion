@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import Field, model_validator
 
-from .base import CharacterId, SceneId, ShotId, StrictModel, duplicate_values
+from .base import CharacterId, PropId, SceneId, ShotId, StrictModel, duplicate_values
 
 
 class KeyframeContract(StrictModel):
@@ -68,6 +68,7 @@ class Shot(StrictModel):
     camera_movement: str = Field(min_length=1, max_length=200)
     visual_description: str = Field(min_length=1, max_length=3000)
     character_ids: list[CharacterId] = Field(default_factory=list, max_length=6)
+    prop_ids: list[PropId] = Field(default_factory=list, max_length=8)
     image_prompt: str = Field(min_length=1, max_length=5000)
     video_prompt: str = Field(min_length=1, max_length=5000)
     keyframe_contract: KeyframeContract
@@ -96,6 +97,9 @@ class Shot(StrictModel):
         duplicates = duplicate_values(self.character_ids)
         if duplicates:
             raise ValueError(f"duplicate shot character IDs: {sorted(duplicates)}")
+        duplicate_props = duplicate_values(self.prop_ids)
+        if duplicate_props:
+            raise ValueError(f"duplicate shot prop IDs: {sorted(duplicate_props)}")
         return self
 
 

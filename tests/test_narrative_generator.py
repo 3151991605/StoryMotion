@@ -64,6 +64,55 @@ def test_repairs_a_missing_json_comma_before_protocol_validation() -> None:
     assert result.story.title == "倒退十秒"
 
 
+def test_accepts_single_candidate_wrapped_in_root_array() -> None:
+    raw = json.loads(fixture_response())
+    brief = ProjectBrief.model_validate(
+        json.loads(
+            (Path(__file__).parent / "fixtures" / "valid_storymotion_bundle.json").read_text(
+                encoding="utf-8"
+            )
+        )["brief"]
+    )
+
+    result = NarrativeGenerator(
+        FakeClient(json.dumps([raw], ensure_ascii=False))
+    ).generate(brief)
+
+    assert result.story.title == "倒退十秒"
+
+
+def test_accepts_common_result_envelope() -> None:
+    raw = json.loads(fixture_response())
+    brief = ProjectBrief.model_validate(
+        json.loads(
+            (Path(__file__).parent / "fixtures" / "valid_storymotion_bundle.json").read_text(
+                encoding="utf-8"
+            )
+        )["brief"]
+    )
+
+    result = NarrativeGenerator(
+        FakeClient(json.dumps({"result": raw}, ensure_ascii=False))
+    ).generate(brief)
+
+    assert result.story.title == "倒退十秒"
+
+
+def test_rejects_ambiguous_multiple_root_candidates() -> None:
+    raw = json.loads(fixture_response())
+    response = json.dumps([raw, raw], ensure_ascii=False)
+    brief = ProjectBrief.model_validate(
+        json.loads(
+            (Path(__file__).parent / "fixtures" / "valid_storymotion_bundle.json").read_text(
+                encoding="utf-8"
+            )
+        )["brief"]
+    )
+
+    with pytest.raises(TextGenerationError, match="exactly one candidate"):
+        NarrativeGenerator(FakeClient(response, response, response)).generate(brief)
+
+
 def test_normalises_common_minimax_screenplay_aliases() -> None:
     raw = json.loads(fixture_response())
     scene = raw["screenplay"]["scenes"][0]
@@ -94,3 +143,53 @@ def test_normalises_missing_story_beats_and_list_rule() -> None:
     result = NarrativeGenerator(FakeClient(json.dumps(raw, ensure_ascii=False))).generate(brief)
     assert result.story.total_beat_duration == brief.target_duration
     assert result.story.worldview.special_rule == "规则一；规则二"
+
+
+def test_infers_phone_prop_and_binds_it_to_relevant_scene() -> None:
+    raw = json.loads(fixture_response())
+    raw["screenplay"]["scenes"][0]["action"] += "林辰拿起手机查看照片。"
+    brief = ProjectBrief.model_validate(
+        json.loads(
+            (Path(__file__).parent / "fixtures" / "valid_storymotion_bundle.json").read_text(
+                encoding="utf-8"
+            )
+        )["brief"]
+    )
+
+    result = NarrativeGenerator(
+        FakeClient(json.dumps(raw, ensure_ascii=False))
+    ).generate(brief)
+
+    phone = next(prop for prop in result.story.props if prop.name == "手机")
+    assert phone.id in result.screenplay.scenes[0].prop_ids
+    assert phone.id not in result.screenplay.scenes[1].prop_ids
+    assert result.screenplay.props == result.story.props
+
+
+def test_preserves_explicit_prop_design_from_model() -> None:
+    raw = json.loads(fixture_response())
+    raw["story"]["props"] = [
+        {
+            "id": "prop_phone",
+            "name": "林辰的手机",
+            "visual_description": "黑色窄边手机，透明裂纹保护壳，左上双摄",
+            "continuity_features": ["透明裂纹保护壳", "左上双摄"],
+            "aliases": ["手机"],
+        }
+    ]
+    raw["screenplay"]["scenes"][0]["prop_ids"] = ["prop_phone"]
+    brief = ProjectBrief.model_validate(
+        json.loads(
+            (Path(__file__).parent / "fixtures" / "valid_storymotion_bundle.json").read_text(
+                encoding="utf-8"
+            )
+        )["brief"]
+    )
+
+    result = NarrativeGenerator(
+        FakeClient(json.dumps(raw, ensure_ascii=False))
+    ).generate(brief)
+
+    assert result.story.props[0].id == "prop_phone"
+    assert "透明裂纹保护壳" in result.story.props[0].continuity_features
+    assert result.screenplay.scenes[0].prop_ids == ["prop_phone"]
