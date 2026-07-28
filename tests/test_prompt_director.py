@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from storymotion.models import StoryMotionBundle
-from storymotion.services import direct_storyboard
+from storymotion.services import direct_storyboard, render_video_prompt_for_shot
+from storymotion.services.prompt_director import VIDEO_NEGATIVE_CONSTRAINTS
 
 
 def test_renders_every_video_prompt_from_an_observable_keyframe_contract() -> None:
@@ -21,3 +22,15 @@ def test_renders_every_video_prompt_from_an_observable_keyframe_contract() -> No
     assert all("spatial layout" in shot.video_prompt for shot in directed.shots)
     assert all("IMMUTABLE CHARACTER CONTRACT" in shot.video_prompt for shot in directed.shots)
     assert all("PRIMARY ANCHOR AUTHORITY" in shot.video_prompt for shot in directed.shots)
+    assert all(VIDEO_NEGATIVE_CONSTRAINTS in shot.video_prompt for shot in directed.shots)
+
+    # The provider boundary rebuilds prompts from structured fields.  Identity
+    # must survive that rebuild instead of existing only in saved prompt prose.
+    assert all(
+        "IMMUTABLE CHARACTER CONTRACT" in render_video_prompt_for_shot(shot)
+        for shot in directed.shots
+    )
+    assert all(
+        VIDEO_NEGATIVE_CONSTRAINTS in render_video_prompt_for_shot(shot)
+        for shot in directed.shots
+    )

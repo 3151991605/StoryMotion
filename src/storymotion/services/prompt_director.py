@@ -18,6 +18,18 @@ CAMERA_MOVEMENT_LABELS = {
     "handheld_subtle": "轻微手持",
 }
 
+# This is deliberately part of every video prompt rather than an optional
+# provider parameter: the supported video API has no separate negative-prompt
+# field. Keep character, anatomy and presentation failures together so they
+# cannot drift between storyboard implementations.
+VIDEO_NEGATIVE_CONSTRAINTS = (
+    "负面约束：禁止换脸，禁止改变人物年龄、性别表达、发型、服装颜色或服装层次；"
+    "禁止新增人物、角色复制、角色融合或背景人物抢镜；"
+    "禁止多余手指、手指融合、肢体缺失或身体变形；"
+    "禁止改变关键道具；禁止文字、字幕、水印、标志、旁白和说话口型；"
+    "禁止随机切镜。"
+)
+
 
 def _chinese_camera_term(value: str, labels: dict[str, str]) -> str:
     return labels.get(value, value)
@@ -50,7 +62,7 @@ def _render_video_prompt(
     duration: float = 6,
 ) -> str:
     """Render the only prompt allowed across the video-provider boundary."""
-    return (
+    prompt = (
         "图生视频，竖屏 9:16，2D 动画短剧，赛璐璐上色、干净线稿、受控平涂色彩；"
         "绝不写实或真人风格。"
         "identity lock：以输入首帧作为第 0 秒画面，不改变人物身份、脸部、发型、服装、"
@@ -66,9 +78,14 @@ def _render_video_prompt(
         f"然后执行唯一连续动作：{contract.action}；"
         f"最后停在结束关键帧／可见结果：{contract.result}。"
         f"连续性：交给下一镜：{contract.transition_to_next}。"
-        "动作从起点推进到结果，不循环、不重复、不随机切镜。"
-        "禁止文字、字幕、水印、标志、旁白、说话口型和新增人物。"
-    )[:4900]
+        "动作从起点推进到结果，不循环、不重复。"
+        f"{VIDEO_NEGATIVE_CONSTRAINTS}"
+    )
+    # Preserve the complete negative contract even for unusually long
+    # storyboard descriptions, which otherwise would truncate the final rule.
+    if len(prompt) <= 4900:
+        return prompt
+    return prompt[: 4900 - len(VIDEO_NEGATIVE_CONSTRAINTS)] + VIDEO_NEGATIVE_CONSTRAINTS
 
 
 def render_video_prompt_for_shot(shot: Shot) -> str:
@@ -77,6 +94,7 @@ def render_video_prompt_for_shot(shot: Shot) -> str:
         shot.keyframe_contract,
         shot_type=shot.shot_type,
         camera=shot.camera_movement,
+        identity_contract=shot.identity_contract,
         duration=shot.duration,
     )
 
@@ -93,6 +111,7 @@ def direct_storyboard(
         directed_shots.append(
             shot.model_copy(
                 update={
+                    "identity_contract": identity_contract,
                     "image_prompt": _render_image_prompt(
                         shot.keyframe_contract,
                         shot_type=shot.shot_type,

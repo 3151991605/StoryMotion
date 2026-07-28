@@ -69,6 +69,9 @@ class Shot(StrictModel):
     visual_description: str = Field(min_length=1, max_length=3000)
     character_ids: list[CharacterId] = Field(default_factory=list, max_length=6)
     prop_ids: list[PropId] = Field(default_factory=list, max_length=8)
+    # Kept separately from provider prose so the video boundary can rebuild a
+    # visual-only prompt without dropping the cast identity lock.
+    identity_contract: str = Field(default="", max_length=3500)
     image_prompt: str = Field(min_length=1, max_length=5000)
     video_prompt: str = Field(min_length=1, max_length=5000)
     keyframe_contract: KeyframeContract

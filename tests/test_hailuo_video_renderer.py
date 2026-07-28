@@ -90,6 +90,10 @@ def test_renderer_submits_contract_prompt_not_stored_dialogue(tmp_path) -> None:
     shot = make_shot(6).model_copy(
         update={
             "video_prompt": "玄兽低声说：你的兄长并没有死。",
+            "identity_contract": (
+                "IMMUTABLE CHARACTER CONTRACT: PRIMARY ANCHOR AUTHORITY: "
+                "林辰; hair=黑色短发; wardrobe=深灰宗门服."
+            ),
             "keyframe_contract": contract,
         }
     )
@@ -107,6 +111,8 @@ def test_renderer_submits_contract_prompt_not_stored_dialogue(tmp_path) -> None:
 
     submitted_prompt = provider.requests[0].prompt
     assert "你的兄长并没有死" not in submitted_prompt
+    assert "IMMUTABLE CHARACTER CONTRACT" in submitted_prompt
+    assert "PRIMARY ANCHOR AUTHORITY" in submitted_prompt
     assert "唯一连续动作：林辰挥剑格挡玄兽利爪" in submitted_prompt
 
 
